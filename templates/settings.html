@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Settings · Fieldnotes{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:14px"><a class="btn btn-ghost btn-sm" href="/">← Back</a></div>
+<div class="section-head"><h2>Settings</h2></div>
+
+{% if saved == "resume" %}<div class="empty quiet" style="text-align:left;margin-bottom:18px">Saved your resume. ✨</div>{% endif %}
+{% if saved == "key" %}<div class="empty quiet" style="text-align:left;margin-bottom:18px">Saved your API key. You're ready to analyze postings.</div>{% endif %}
+
+<div class="panel" style="margin-bottom:18px">
+  <h3 style="font-size:16px;margin:0 0 4px">Anthropic API key</h3>
+  <p class="hint" style="margin-top:0">
+    This lets the app read job postings for you. It's stored only on your machine
+    (in a hidden <code>.env</code> file) and never shared.
+    {% if has_key %}
+      <br><strong style="color:var(--sage-strong)">✓ A key is saved</strong> ({{ masked_key }}).
+    {% else %}
+      <br>No key yet — get one at
+      <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>,
+      then paste it below. (It starts with <code>sk-ant-</code>.)
+    {% endif %}
+  </p>
+  <form method="post" action="/settings/apikey">
+    <div class="field">
+      <label for="api_key">{{ "Replace key" if has_key else "Paste your key" }}</label>
+      <input id="api_key" name="api_key" type="password" autocomplete="off"
+             placeholder="sk-ant-...">
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Save key</button></div>
+  </form>
+</div>
+
+<div class="panel">
+  <h3 style="font-size:16px;margin:0 0 4px">Your resume</h3>
+  <p class="hint" style="margin-top:0">
+    Paste your resume as plain text. The app compares it against each job posting
+    to find the <strong>keyword gaps</strong> — the skills a posting wants that
+    your resume doesn't mention yet. The more complete this is, the better.
+  </p>
+  <form method="post" action="/settings/resume">
+    <div class="field">
+      <label for="resume">Resume text</label>
+      <textarea id="resume" name="resume" style="min-height:320px; font-family:inherit"
+                placeholder="Paste your full resume here…">{{ resume }}</textarea>
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit">Save resume</button></div>
+  </form>
+</div>
+{% endblock %}

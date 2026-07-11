@@ -34,13 +34,69 @@
     {% if app.last_activity %}<dt>Last activity</dt><dd>{{ fmt_date(app.last_activity) }}</dd>{% endif %}
   </dl>
 
-  {# keyword_gap: populated in Phase 2, but render it here as first-class when present. #}
-  {% if app.keyword_gap %}
+  {# --- Tailored resume (Phase 3) --- #}
   <hr class="soft">
-  <h3 style="font-size:15px;margin:0 0 8px">Keyword gaps to close</h3>
-  <div class="chips">
-    {% for k in app.keyword_gap|fromjson %}<span class="kw-chip">{{ k }}</span>{% endfor %}
+  <h3 style="font-size:15px;margin:0 0 8px">Tailored resume</h3>
+  {% if app.jd_full_text %}
+    {% include "partials/tailor_status.html" %}
+  {% else %}
+    <p class="hint" style="margin:0 0 8px">
+      To tailor a resume for this role, the generator needs the job description.
+      Paste it here (or re-add this role via “Add from posting”):
+    </p>
+    <form method="post" action="/applications/{{ app.id }}/jd">
+      <div class="field">
+        <textarea name="jd_full_text" style="min-height:120px;font-family:inherit"
+                  placeholder="Paste the job description…"></textarea>
+      </div>
+      <div class="form-actions"><button class="btn btn-sm btn-primary" type="submit">Save job description</button></div>
+    </form>
+  {% endif %}
+
+  {# --- Fit summary (Phase 2) --- #}
+  {% if app.match_score is not none or app.match_reason %}
+  <hr class="soft">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+    <h3 style="font-size:15px;margin:0">Fit</h3>
+    {% if app.match_score is not none %}
+    <span class="pill" style="background:var(--sage);color:#fff">{{ app.match_score }}/100 match</span>
+    {% endif %}
   </div>
+  {% if app.match_reason %}<p style="margin:8px 0 0;color:var(--slate)">{{ app.match_reason }}</p>{% endif %}
+  {% endif %}
+
+  {# keyword_gap: the thing to act on — render prominently as chips. #}
+  {% set gaps = app.keyword_gap|fromjson %}
+  {% if gaps %}
+  <hr class="soft">
+  <h3 style="font-size:15px;margin:0 0 8px">⚑ Keyword gaps to close</h3>
+  <p class="hint" style="margin:0 0 8px">In the posting, missing from your resume:</p>
+  <div class="chips">
+    {% for k in gaps %}<span class="kw-chip" style="background:var(--apricot-tint);color:#8a5a29">{{ k }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% set kws = app.keywords|fromjson %}
+  {% if kws %}
+  <hr class="soft">
+  <h3 style="font-size:15px;margin:0 0 8px">Keywords the employer cares about</h3>
+  <div class="chips">
+    {% for k in kws %}<span class="kw-chip">{{ k }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if app.visa_note %}
+  <hr class="soft">
+  <h3 style="font-size:15px;margin:0 0 6px">Work authorization</h3>
+  <p style="margin:0;color:var(--slate)">{{ app.visa_note }}</p>
+  {% endif %}
+
+  {% if app.jd_full_text %}
+  <hr class="soft">
+  <details>
+    <summary style="cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;font-size:15px">Saved job description</summary>
+    <div class="notes-block" style="margin-top:8px;max-height:340px;overflow:auto">{{ app.jd_full_text }}</div>
+  </details>
   {% endif %}
 
   {% if app.interview_notes %}

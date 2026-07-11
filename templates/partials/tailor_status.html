@@ -1,0 +1,66 @@
+{# Self-contained panel for the Tailor-resume feature. While a job runs it
+   polls itself every few seconds; when done/idle it shows the version list. #}
+<div id="tailor-panel"
+     {% if job and job.status == "running" %}
+       hx-get="/applications/{{ app_id }}/tailor/status"
+       hx-trigger="every 4s"
+       hx-target="#tailor-panel"
+       hx-swap="outerHTML"
+     {% endif %}>
+
+  {% if job and job.status == "running" %}
+    <div class="empty quiet" style="text-align:left">
+      <strong>Tailoring your resume…</strong>
+      This runs your generator (a headless Claude session + PDF render) and
+      usually takes a few minutes. You can leave this page open — it'll update
+      here when it's ready.
+    </div>
+
+  {% elif job and job.status == "error" %}
+    <div class="empty" style="border-color:var(--rose);background:var(--rose-tint);color:#8f5a63;text-align:left">
+      <strong>That didn't work</strong>
+      {{ job.message }}
+    </div>
+    <div class="card-actions" style="margin-top:10px">
+      <button class="btn btn-sm btn-primary"
+              hx-post="/applications/{{ app_id }}/tailor"
+              hx-target="#tailor-panel" hx-swap="outerHTML">Try again</button>
+    </div>
+
+  {% else %}
+    {% if job and job.status == "done" %}
+      <div class="empty quiet" style="text-align:left;margin-bottom:12px">
+        <strong>Done ✨</strong> Your tailored resume is ready below — always a draft to review before sending.
+      </div>
+    {% endif %}
+
+    <div class="card-actions">
+      <button class="btn btn-sm btn-primary"
+              hx-post="/applications/{{ app_id }}/tailor"
+              hx-target="#tailor-panel" hx-swap="outerHTML"
+              hx-disabled-elt="this">
+        {{ "Tailor again" if versions else "Tailor resume" }}
+      </button>
+    </div>
+  {% endif %}
+
+  {% if versions %}
+  <div style="margin-top:14px">
+    <p class="hint" style="margin:0 0 6px">Versions you've generated:</p>
+    {% for v in versions %}
+    <div class="card" style="margin-bottom:8px;padding:12px 14px">
+      <div class="card-top">
+        <div>
+          <div class="card-title" style="font-size:15px">Tailored resume</div>
+          <div class="card-sub">{{ fmt_date(v.created_at) }}{% if loop.first %} · latest{% endif %}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          {% if v.pdf_path %}<a class="btn btn-sm" href="/resume/{{ v.id }}/download?fmt=pdf">PDF</a>{% endif %}
+          {% if v.docx_path %}<a class="btn btn-sm btn-ghost" href="/resume/{{ v.id }}/download?fmt=docx">Word</a>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

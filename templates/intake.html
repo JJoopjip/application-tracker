@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Add from a job posting · Fieldnotes{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:14px"><a class="btn btn-ghost btn-sm" href="/">← Back</a></div>
+<div class="section-head"><h2>Add from a job posting</h2></div>
+
+<p class="hint" style="margin-top:-6px;margin-bottom:16px">
+  Paste a job description (or a link to one) and the app fills in the details,
+  scores your fit, and finds the keyword gaps. You'll get to review everything
+  before it's saved.
+</p>
+
+{% if error %}
+<div class="empty" style="border-color:var(--apricot);background:var(--apricot-tint);color:#8a5a29;text-align:left;margin-bottom:18px">
+  {{ error }}
+</div>
+{% endif %}
+
+{% if not has_key %}
+<div class="empty" style="text-align:left;margin-bottom:18px">
+  <strong>One quick setup step</strong>
+  Add your Anthropic API key on the <a href="/settings">Settings page</a> first — that's what reads the posting for you. It takes a minute.
+</div>
+{% endif %}
+{% if not has_resume %}
+<div class="empty quiet" style="text-align:left;margin-bottom:18px">
+  Tip: add your resume on the <a href="/settings">Settings page</a> so the app can find your keyword gaps. It still works without one.
+</div>
+{% endif %}
+
+<form class="panel" method="post" action="/intake/analyze">
+  <div class="field">
+    <label for="jd_text">Paste the job description</label>
+    <textarea id="jd_text" name="jd_text" style="min-height:260px;font-family:inherit"
+              placeholder="Paste the full job posting text here…"></textarea>
+  </div>
+
+  <div style="text-align:center;color:var(--muted);font-size:13px;margin:16px 0">— or —</div>
+
+  <div class="field">
+    <label for="url">Paste a link to the posting</label>
+    <input id="url" name="url" type="url" placeholder="https://…">
+    <span class="hint">Works for simple pages. LinkedIn / Workday hide their text from tools —
+      for those, paste the description above instead.</span>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit"
+            onclick="this.innerText='Reading the posting…'; this.form.submit();">
+      ✨ Analyze posting
+    </button>
+    <a class="btn btn-ghost" href="/">Cancel</a>
+  </div>
+  <p class="hint" style="margin-top:10px">This takes a few seconds while the AI reads it.</p>
+</form>
+{% endblock %}

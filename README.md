@@ -14,8 +14,30 @@ no data leaves it. This is **Phase 1** — the core manual tracker.
 - **Stats strip:** active, applied, response rate, interviews, offers.
 - **Export to CSV** and **JSON backup / restore** — your data is never trapped.
 
-Phase 2 (AI job-posting intake), Phase 3 (resume generator) and Phase 4 (Gmail
-review queue) are not built yet. The database already has the columns they need.
+## Phase 2 — Add from a job posting (built)
+
+Paste a job description (or a link) on the **Add from posting** page and the app
+uses the Anthropic API to fill in the fields, score your fit, and — most
+usefully — find the **keyword gaps** between the posting and your resume. You
+review and edit everything before it's saved. Set your API key and resume text
+on the **Settings** page first.
+
+## Phase 3 — Tailor resume (built)
+
+Each application's detail page has a **Tailor resume** button. It runs your
+existing resume generator at `/home/joopjip/resume_generator` (overridable with
+the `RESUME_GEN_DIR` env var) against that job's description, then saves the
+resulting `resume.pdf` / `resume.docx` into `data/resumes/` and links them to
+the application — keeping every version, never overwriting.
+
+Requirements for the button to work (all already set up on this machine): the
+`resume-gen` entrypoint, the `claude` CLI (signed in), and the `resume-gen`
+Docker image. A run takes a few minutes and produces a **draft to review** —
+nothing is ever sent anywhere. The tracker wraps your generator; it never
+modifies it (see `integrations/resume_gen.py`).
+
+Phase 4 (Gmail review queue) is not built yet. The database already has the
+columns it needs.
 
 ## Setup
 

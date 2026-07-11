@@ -92,6 +92,18 @@ CREATE TABLE IF NOT EXISTS applications (
     interview_notes   TEXT,
     created_at        TEXT       -- ISO datetime
 );
+
+-- Phase 3: a history of tailored resumes generated for an application. Newer
+-- versions are kept alongside older ones rather than overwriting.
+CREATE TABLE IF NOT EXISTS resume_versions (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    application_id INTEGER NOT NULL,
+    pdf_path       TEXT,
+    docx_path      TEXT,
+    source_folder  TEXT,     -- the generator's output/<slug>/ folder
+    created_at     TEXT,
+    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
+);
 """
 
 
@@ -129,6 +141,14 @@ EDITABLE_FIELDS = [
     "industry",
     "company_size",
     "posting_url",
+    # AI-extracted (Phase 2). Present here so the intake review screen can save
+    # them; the plain add/edit form simply doesn't submit them.
+    "keywords",       # JSON-encoded array string
+    "keyword_gap",    # JSON-encoded array string
+    "match_score",    # int
+    "match_reason",
+    "visa_note",
+    "jd_full_text",
     "date_applied",
     "next_action",
     "next_action_due",
@@ -193,6 +213,41 @@ def get_application(app_id: int) -> sqlite3.Row | None:
 def delete_application(app_id: int) -> None:
     with get_conn() as conn:
         conn.execute("DELETE FROM applications WHERE id = ?", (app_id,))
+
+
+def add_resume_version(
+    app_id: int, pdf_path: str, docx_path: str, source_folder: str
+) -> int:
+    """Record a generated resume and point the application at it (latest wins,
+    but older versions stay in resume_versions for history)."""
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO resume_versions "
+            "(application_id, pdf_path, docx_path, source_folder, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (app_id, pdf_path, docx_path, source_folder, now_iso()),
+        )
+        conn.execute(
+            "UPDATE applications SET resume_path = ?, last_activity = ? WHERE id = ?",
+            (pdf_path, now_iso(), app_id),
+        )
+        return cur.lastrowid
+
+
+def get_resume_versions(app_id: int) -> list[sqlite3.Row]:
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM resume_versions WHERE application_id = ? "
+            "ORDER BY created_at DESC",
+            (app_id,),
+        ).fetchall()
+
+
+def get_resume_version(version_id: int) -> sqlite3.Row | None:
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM resume_versions WHERE id = ?", (version_id,)
+        ).fetchone()
 
 
 def all_applications(

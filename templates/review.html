@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Review before saving · Fieldnotes{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:14px"><a class="btn btn-ghost btn-sm" href="/intake">← Start over</a></div>
+<div class="section-head">
+  <h2>Review before saving</h2>
+  <span class="count">nothing is saved until you press save</span>
+</div>
+
+{% if error %}
+<div class="empty" style="border-color:var(--apricot);background:var(--apricot-tint);color:#8a5a29;text-align:left;margin-bottom:18px">
+  {{ error }}<br><span style="font-size:12.5px">You can still fill in the fields by hand below and save.</span>
+</div>
+{% else %}
+<p class="hint" style="margin-top:-6px;margin-bottom:16px">
+  The AI filled this in from the posting. Everything's editable — fix anything it
+  got wrong, then save.
+</p>
+{% endif %}
+
+<form class="panel" method="post" action="/intake/save">
+  <input type="hidden" name="jd_full_text" value="{{ jd_text|e }}">
+
+  {# --- Fit summary: the part that matters most --- #}
+  <div style="background:var(--sage-tint);border-radius:var(--radius);padding:16px 18px;margin-bottom:20px">
+    <div class="form-grid">
+      <div class="field">
+        <label for="match_score">Match score (0–100)</label>
+        <input id="match_score" name="match_score" type="number" min="0" max="100"
+               value="{{ p.get('match_score', '') }}">
+      </div>
+      <div class="field">
+        <label for="status">Save as</label>
+        <select id="status" name="status">
+          {% for s in STATUSES %}
+          <option value="{{ s }}" {% if s == 'wishlist' %}selected{% endif %}>{{ STATUS_LABELS[s] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field full">
+        <label for="match_reason">Why this score</label>
+        <textarea id="match_reason" name="match_reason" style="min-height:64px">{{ p.get('match_reason', '') }}</textarea>
+      </div>
+      <div class="field full">
+        <label for="keyword_gap">⚑ Keyword gaps — what the job wants that your resume doesn't mention</label>
+        <textarea id="keyword_gap" name="keyword_gap" style="min-height:64px"
+                  placeholder="comma-separated">{{ (p.get('keyword_gap') or [])|join(', ') }}</textarea>
+        <span class="hint">These are the things to address. Comma-separated.</span>
+      </div>
+    </div>
+  </div>
+
+  {# --- The rest of the record --- #}
+  <div class="form-grid">
+    <div class="field">
+      <label for="company">Company *</label>
+      <input id="company" name="company" required value="{{ p.get('company', '') }}">
+    </div>
+    <div class="field">
+      <label for="position">Position *</label>
+      <input id="position" name="position" required value="{{ p.get('position', '') }}">
+    </div>
+    <div class="field">
+      <label for="location">Location</label>
+      <input id="location" name="location" value="{{ p.get('location', '') }}">
+    </div>
+    <div class="field">
+      <label for="salary">Salary</label>
+      <input id="salary" name="salary" value="{{ p.get('salary', '') }}">
+    </div>
+    <div class="field">
+      <label for="seniority">Seniority</label>
+      <input id="seniority" name="seniority" value="{{ p.get('seniority', '') }}">
+    </div>
+    <div class="field">
+      <label for="industry">Industry</label>
+      <input id="industry" name="industry" value="{{ p.get('industry', '') }}">
+    </div>
+    <div class="field">
+      <label for="company_size">Company size</label>
+      <input id="company_size" name="company_size" value="{{ p.get('company_size', '') }}">
+    </div>
+    <div class="field">
+      <label for="source">Source</label>
+      <input id="source" name="source" placeholder="LinkedIn / referral / recruiter">
+    </div>
+    <div class="field full">
+      <label for="keywords">Keywords the employer cares about</label>
+      <textarea id="keywords" name="keywords" style="min-height:56px"
+                placeholder="comma-separated">{{ (p.get('keywords') or [])|join(', ') }}</textarea>
+    </div>
+    <div class="field full">
+      <label for="visa_note">Work-authorization / sponsorship note</label>
+      <input id="visa_note" name="visa_note" value="{{ p.get('visa_note', '') }}">
+    </div>
+    <div class="field full">
+      <label for="posting_url">Posting URL</label>
+      <input id="posting_url" name="posting_url" type="url" value="{{ posting_url or '' }}">
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Save application</button>
+    <a class="btn btn-ghost" href="/intake">Cancel</a>
+  </div>
+</form>
+{% endblock %}
