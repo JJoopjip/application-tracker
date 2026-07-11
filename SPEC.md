@@ -7,9 +7,7 @@
 
 ## 0. Context
 
-I'm a business development professional in Toronto job-hunting for BD / partnerships / market-expansion roles. I already have a **Python resume generator script** on this machine, and I use **Gmail** for job applications.
-
-I want a **local-first job application tracker** that becomes the single place I work out of every day. Everything runs on my machine. No data leaves it except calls to the Anthropic API for text analysis.
+A local-first job application tracker for managing a job search from one place. Everything runs on the user's machine; no data leaves it except calls to the Anthropic API for text analysis. It integrates with an existing Python resume generator and Gmail.
 
 **Build order:** Phase 1 → 2 → 3 → 4. Each phase must be fully usable on its own before moving on.
 
