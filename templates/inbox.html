@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Inbox review · Fieldnotes{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:14px"><a class="btn btn-ghost btn-sm" href="/">← Back</a></div>
+<div class="section-head"><h2>Inbox review</h2></div>
+
+<p class="hint" style="margin-top:-6px;margin-bottom:16px">
+  Scan reads your Gmail (read-only), spots job-related updates — rejections,
+  interview invites, assessments, offers, recruiter outreach — and lines them up
+  here. <strong>Nothing changes until you press Confirm.</strong>
+</p>
+
+{% if gmail_status == "no_credentials" %}
+<div class="empty" style="text-align:left;margin-bottom:18px">
+  <strong>Gmail isn't set up yet</strong>
+  Follow the one-time Gmail setup in the README, then connect it on the
+  <a href="/settings">Settings page</a>.
+</div>
+{% elif gmail_status == "needs_auth" %}
+<div class="empty" style="text-align:left;margin-bottom:18px">
+  <strong>Almost there — connect Gmail</strong>
+  Your credentials file is in place. Head to <a href="/settings">Settings</a> and press “Connect Gmail” to authorize (read-only).
+</div>
+{% else %}
+<form class="panel" method="post" action="/gmail/scan" style="margin-bottom:20px"
+      hx-post="/gmail/scan" hx-target="#scan-panel" hx-swap="outerHTML">
+  <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap">
+    <div class="field" style="max-width:180px">
+      <label for="days">Look back</label>
+      <select id="days" name="days">
+        <option value="7">Last 7 days</option>
+        <option value="14" selected>Last 14 days</option>
+        <option value="30">Last 30 days</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" type="submit">Scan inbox</button>
+  </div>
+  <p class="hint" style="margin:10px 0 0">Gmail connected · read-only. Each new email is classified once, then never re-surfaced.</p>
+</form>
+{% endif %}
+
+<div id="scan-panel-wrap">
+  {% include "partials/scan_status.html" %}
+</div>
+{% endblock %}

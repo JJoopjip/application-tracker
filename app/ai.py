@@ -173,3 +173,127 @@ def analyze(jd_text: str, resume_text: str) -> dict:
             data[k] = []
 
     return {"ok": True, "data": data}
+
+
+# ===========================================================================
+# Phase 4 — classify an inbox email about a job application.
+# Model is claude-opus-4-8 (the user chose the most accurate option, since
+# false positives here are costly — see EMAIL_MODEL to change it later).
+# ===========================================================================
+EMAIL_MODEL = "claude-opus-4-8"
+
+EMAIL_CLASSES = [
+    "rejection",
+    "interview_invite",
+    "screening_request",
+    "assessment",       # online assessment / take-home / OA
+    "offer",
+    "recruiter_outreach",
+    "not_job_related",
+]
+
+# Comment this prompt freely to tune classification. The guardrail that matters
+# most: DO NOT over-call "rejection" — "we're moving forward with others for
+# this role, but we'll keep you in mind" is common and is NOT a plain rejection
+# of the person; only classify a clear no as a rejection.
+EMAIL_SYSTEM_PROMPT = """\
+You classify emails for a job seeker's application tracker. You are given one \
+email (sender, subject, body). Decide which single category it fits, and \
+extract a few facts. Be conservative and precise — the user reviews every call \
+before anything changes, and false positives waste their time.
+
+Categories:
+- rejection: a clear "no" for the person for a specific role.
+- interview_invite: an invitation to interview / schedule a call with the team.
+- screening_request: a recruiter/HR asking to schedule an initial screen or \
+phone chat, or asking screening questions.
+- assessment: an online assessment, coding test, take-home, or case study to \
+complete.
+- offer: a job offer or offer-related logistics.
+- recruiter_outreach: a recruiter proactively reaching out about a role the \
+seeker did NOT already apply to (inbound sourcing).
+- not_job_related: newsletters, marketing, personal mail, anything not about a \
+specific application or opportunity.
+
+Important nuances:
+- "We're moving forward with other candidates FOR THIS ROLE but will keep your \
+resume on file / encourage you to apply to other roles" is a rejection of that \
+application. But a generic talent-community / keep-in-touch blast is \
+not_job_related.
+- If it's ambiguous, prefer the lower-commitment category and lower confidence.
+
+Extract:
+- company: the employer the email is about (not the email provider). Empty if unclear.
+- role: the specific position mentioned, if any. Empty otherwise.
+- dates: any dates, times, or deadlines mentioned (free text). Empty if none.
+- notable_detail: one short phrase worth remembering — e.g. "invited to reapply \
+in 6 months", "assessment due Friday", "salary band $90-110k". Empty if none.
+- confidence: 0-100, how sure you are of the category.
+- reasoning: one sentence explaining the classification."""
+
+EMAIL_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "classification": {"type": "string", "enum": EMAIL_CLASSES},
+        "confidence": {"type": "integer"},
+        "company": {"type": "string"},
+        "role": {"type": "string"},
+        "dates": {"type": "string"},
+        "notable_detail": {"type": "string"},
+        "reasoning": {"type": "string"},
+    },
+    "required": [
+        "classification", "confidence", "company", "role", "dates",
+        "notable_detail", "reasoning",
+    ],
+    "additionalProperties": False,
+}
+
+
+def classify_email(email: dict) -> dict:
+    """Classify one email. Returns {"ok": True, "data": {...}} or
+    {"ok": False, "error": ...}. `email` has sender_name/sender_email/subject/body."""
+    api_key = settings_store.get_api_key()
+    if not api_key:
+        return {"ok": False, "error": "No Anthropic API key set (add one in Settings)."}
+
+    client = anthropic.Anthropic(api_key=api_key)
+    content = (
+        f"From: {email.get('sender_name','')} <{email.get('sender_email','')}>\n"
+        f"Subject: {email.get('subject','')}\n\n"
+        f"{email.get('body','') or email.get('snippet','')}"
+    )
+    try:
+        response = client.messages.create(
+            model=EMAIL_MODEL,
+            max_tokens=1024,
+            system=EMAIL_SYSTEM_PROMPT,
+            output_config={
+                "format": {"type": "json_schema", "schema": EMAIL_SCHEMA},
+                "effort": "low",  # simple classification — keep it fast/cheap
+            },
+            messages=[{"role": "user", "content": content}],
+        )
+    except anthropic.AuthenticationError:
+        return {"ok": False, "error": "The API key was rejected (check Settings)."}
+    except anthropic.APIError as exc:
+        return {"ok": False, "error": f"AI service problem: {exc}"}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"Couldn't reach the AI: {exc}"}
+
+    if response.stop_reason == "refusal":
+        return {"ok": False, "error": "The AI declined to classify this email."}
+
+    raw = next((b.text for b in response.content if b.type == "text"), "")
+    try:
+        data = json.loads(_strip_fences(raw))
+    except (ValueError, TypeError):
+        return {"ok": False, "error": "AI response wasn't valid JSON.", "raw": raw}
+
+    try:
+        data["confidence"] = int(data.get("confidence") or 0)
+    except (ValueError, TypeError):
+        data["confidence"] = 0
+    if data.get("classification") not in EMAIL_CLASSES:
+        data["classification"] = "not_job_related"
+    return {"ok": True, "data": data}

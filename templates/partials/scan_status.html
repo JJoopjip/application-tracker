@@ -1,0 +1,89 @@
+{# Scan status banner + the review queue. Self-polls while a scan runs. #}
+<div id="scan-panel"
+     {% if scan.status == "running" %}
+       hx-get="/review/scan-status" hx-trigger="every 3s"
+       hx-target="#scan-panel" hx-swap="outerHTML"
+     {% endif %}>
+
+  {% if scan.status == "running" %}
+    <div class="empty quiet" style="text-align:left;margin-bottom:16px">
+      <strong>Reading your inbox…</strong>
+      Classifying each new email. This can take a moment on a busy inbox — it'll
+      fill the queue below when it's done.
+    </div>
+  {% elif scan.status == "error" %}
+    <div class="empty" style="border-color:var(--rose);background:var(--rose-tint);color:#8f5a63;text-align:left;margin-bottom:16px">
+      <strong>Couldn't finish the scan</strong>{{ scan.message }}
+    </div>
+  {% elif scan.status == "done" %}
+    <div class="empty quiet" style="text-align:left;margin-bottom:16px">{{ scan.message }}</div>
+  {% endif %}
+
+  {# --- The review queue --- #}
+  {% if events %}
+    <div class="section-head"><h2>To review</h2><span class="count">{{ events|length }} pending</span></div>
+    {% for ev in events %}
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-top">
+        <div>
+          <div class="card-title" style="font-size:15px">{{ ev.subject or "(no subject)" }}</div>
+          <div class="card-sub">{{ ev.sender_name or ev.sender_email }}{% if ev.sender_email %} · {{ ev.sender_email }}{% endif %}</div>
+        </div>
+        <span class="pill status-{{ ev.proposed_status or 'wishlist' }}">
+          {{ EMAIL_LABELS.get(ev.classification, ev.classification) }}{% if ev.confidence %} · {{ ev.confidence }}%{% endif %}
+        </span>
+      </div>
+
+      {% if ev.snippet %}<p style="margin:8px 0;color:var(--muted);font-size:13.5px">“{{ ev.snippet[:220] }}{% if ev.snippet|length > 220 %}…{% endif %}”</p>{% endif %}
+      {% if ev.reasoning %}<p class="attn-reason" style="margin:0">{{ ev.reasoning }}</p>{% endif %}
+
+      {# Proposed change, in plain language #}
+      <p style="margin:10px 0 6px;font-weight:600;font-size:13.5px">
+        {% if ev.matched_application_id and apps_by_id.get(ev.matched_application_id) %}
+          {% set a = apps_by_id[ev.matched_application_id] %}
+          Proposed: <strong>{{ a.company }} · {{ a.position }}</strong>
+          {% if ev.proposed_status %} → {{ STATUS_LABELS[ev.proposed_status] }}{% endif %}
+        {% else %}
+          No matching application — you can create a new one below.
+        {% endif %}
+      </p>
+
+      {# The AI proposes; you decide. Editing the controls IS the "Edit". #}
+      <form method="post" action="/review/{{ ev.id }}/confirm">
+        <div class="form-grid">
+          <div class="field">
+            <label>Apply to</label>
+            <select name="apply_to">
+              <option value="new" {% if not ev.matched_application_id %}selected{% endif %}>➕ Create new application</option>
+              {% for a in apps %}
+              <option value="{{ a.id }}" {% if a.id == ev.matched_application_id %}selected{% endif %}>{{ a.company }} — {{ a.position }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Set status to</label>
+            <select name="status">
+              {% for s in STATUSES %}
+              <option value="{{ s }}" {% if s == (ev.proposed_status or 'wishlist') %}selected{% endif %}>{{ STATUS_LABELS[s] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field full">
+            <label>Add to notes (e.g. reapply window, deadline, feedback)</label>
+            <input name="note" value="{{ ev.notable_detail or '' }}">
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-sm btn-primary" type="submit">Confirm</button>
+          <button class="btn btn-sm btn-ghost" type="submit" formaction="/review/{{ ev.id }}/ignore">Ignore</button>
+        </div>
+      </form>
+    </div>
+    {% endfor %}
+  {% elif scan.status in ("done", "idle") %}
+    <div class="empty">
+      <strong>Nothing waiting</strong>
+      When you scan your inbox, any job-related updates land here for you to confirm before anything changes.
+    </div>
+  {% endif %}
+</div>

@@ -36,8 +36,37 @@ Docker image. A run takes a few minutes and produces a **draft to review** —
 nothing is ever sent anywhere. The tracker wraps your generator; it never
 modifies it (see `integrations/resume_gen.py`).
 
-Phase 4 (Gmail review queue) is not built yet. The database already has the
-columns it needs.
+## Phase 4 — Gmail review queue (built)
+
+The **Inbox** page scans your Gmail (strictly **read-only**), uses the Anthropic
+API to classify each new email — rejection / interview invite / screening /
+assessment / offer / recruiter outreach — matches it to an existing application
+(by email thread, then contact address, then a fuzzy company-name match), and
+lines the updates up in a review queue. **Nothing is written to your
+applications until you press Confirm** — you can edit the target, status, and
+notes on every card, or Ignore it. Each email is processed once and never
+re-surfaced.
+
+### One-time Gmail setup
+
+You do this in your own Google account; the app can't do it for you. It grants
+**read-only** access only.
+
+1. Go to <https://console.cloud.google.com/> and create a project (any name).
+2. **APIs & Services → Library →** search **“Gmail API” → Enable**.
+3. **APIs & Services → OAuth consent screen:** choose **External**, fill in the
+   required app name / your email, and add **your own Google account** under
+   **Test users** (so you can authorize while the app is unpublished).
+4. **APIs & Services → Credentials → Create credentials → OAuth client ID →**
+   Application type **Desktop app**. Create it, then **Download JSON**.
+5. Rename that file to **`credentials.json`** and put it in the project root
+   (next to `run.py`).
+6. Open **Settings** in the app → **Connect Gmail** → a browser window opens →
+   sign in and allow read-only access. A `token.json` is cached so you only do
+   this once.
+
+Then open **Inbox → Scan inbox**. Both `credentials.json` and `token.json` are
+git-ignored and never leave your machine.
 
 ## Setup
 

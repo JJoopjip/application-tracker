@@ -104,6 +104,31 @@ CREATE TABLE IF NOT EXISTS resume_versions (
     created_at     TEXT,
     FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
 );
+
+-- Phase 4: every Gmail message we've processed. Recording each message_id means
+-- the same email is never re-surfaced, and gives an audit trail. Rows with
+-- action_taken IS NULL are the pending review queue; 'not_relevant' rows are
+-- classified-but-hidden; 'confirmed'/'ignored'/'created' are resolved.
+CREATE TABLE IF NOT EXISTS email_events (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id           TEXT UNIQUE NOT NULL,
+    thread_id            TEXT,
+    classification       TEXT,
+    confidence           INTEGER,
+    company_guess        TEXT,
+    role_guess           TEXT,
+    sender_name          TEXT,
+    sender_email         TEXT,
+    subject              TEXT,
+    snippet              TEXT,
+    dates_text           TEXT,
+    notable_detail       TEXT,
+    reasoning            TEXT,
+    proposed_status      TEXT,
+    matched_application_id INTEGER,
+    action_taken         TEXT,     -- NULL = pending; confirmed|ignored|created|not_relevant
+    processed_at         TEXT
+);
 """
 
 
@@ -248,6 +273,76 @@ def get_resume_version(version_id: int) -> sqlite3.Row | None:
         return conn.execute(
             "SELECT * FROM resume_versions WHERE id = ?", (version_id,)
         ).fetchone()
+
+
+# --- Email events (Phase 4) ------------------------------------------------
+def email_seen(message_id: str) -> bool:
+    with get_conn() as conn:
+        return (
+            conn.execute(
+                "SELECT 1 FROM email_events WHERE message_id = ?", (message_id,)
+            ).fetchone()
+            is not None
+        )
+
+
+def add_email_event(event: dict) -> int:
+    cols = [
+        "message_id", "thread_id", "classification", "confidence",
+        "company_guess", "role_guess", "sender_name", "sender_email", "subject",
+        "snippet", "dates_text", "notable_detail", "reasoning",
+        "proposed_status", "matched_application_id", "action_taken",
+    ]
+    values = [event.get(c) for c in cols]
+    with get_conn() as conn:
+        cur = conn.execute(
+            f"INSERT OR IGNORE INTO email_events ({', '.join(cols)}, processed_at) "
+            f"VALUES ({', '.join('?' for _ in cols)}, ?)",
+            values + [now_iso()],
+        )
+        return cur.lastrowid
+
+
+def get_email_event(event_id: int) -> sqlite3.Row | None:
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM email_events WHERE id = ?", (event_id,)
+        ).fetchone()
+
+
+def pending_email_events() -> list[sqlite3.Row]:
+    """The review queue: classified job-related emails awaiting a decision."""
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM email_events WHERE action_taken IS NULL "
+            "ORDER BY processed_at DESC"
+        ).fetchall()
+
+
+def resolve_email_event(event_id: int, action: str, application_id: int | None = None) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE email_events SET action_taken = ?, matched_application_id = "
+            "COALESCE(?, matched_application_id) WHERE id = ?",
+            (action, application_id, event_id),
+        )
+
+
+def append_note(app_id: int, note: str) -> None:
+    """Append a timestamped line to an application's interview_notes."""
+    if not note or not note.strip():
+        return
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT interview_notes FROM applications WHERE id = ?", (app_id,)
+        ).fetchone()
+        existing = (row["interview_notes"] if row and row["interview_notes"] else "").rstrip()
+        stamped = f"[{today_iso()}] {note.strip()}"
+        combined = f"{existing}\n{stamped}" if existing else stamped
+        conn.execute(
+            "UPDATE applications SET interview_notes = ?, last_activity = ? WHERE id = ?",
+            (combined, now_iso(), app_id),
+        )
 
 
 def all_applications(

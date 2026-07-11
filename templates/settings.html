@@ -7,6 +7,33 @@
 
 {% if saved == "resume" %}<div class="empty quiet" style="text-align:left;margin-bottom:18px">Saved your resume. ✨</div>{% endif %}
 {% if saved == "key" %}<div class="empty quiet" style="text-align:left;margin-bottom:18px">Saved your API key. You're ready to analyze postings.</div>{% endif %}
+{% if saved == "gmail" %}
+  {% if gmail_status == "connected" %}<div class="empty quiet" style="text-align:left;margin-bottom:18px">Gmail connected. ✓ Head to <a href="/review">Inbox</a> to scan.</div>
+  {% else %}<div class="empty" style="border-color:var(--rose);background:var(--rose-tint);color:#8f5a63;text-align:left;margin-bottom:18px">Gmail didn't connect. Check the setup steps in the README and try again.</div>{% endif %}
+{% endif %}
+
+<div class="panel" style="margin-bottom:18px">
+  <h3 style="font-size:16px;margin:0 0 4px">Gmail (read-only)</h3>
+  <p class="hint" style="margin-top:0">
+    Lets the app read your inbox and surface job-related updates for you to
+    confirm. It's <strong>read-only</strong> — it can never send, delete, or
+    change your mail. Setup is a one-time step; see the README.
+  </p>
+  {% if gmail_status == "connected" %}
+    <p style="margin:6px 0 0"><strong style="color:var(--sage-strong)">✓ Connected.</strong> Go to <a href="/review">Inbox</a> to scan.</p>
+  {% elif gmail_status == "needs_auth" %}
+    <p class="hint" style="margin:6px 0 10px">Your <code>credentials.json</code> is in place. Authorize now — this opens a browser window to sign in.</p>
+    <form method="post" action="/gmail/connect">
+      <button class="btn btn-primary" type="submit">Connect Gmail</button>
+    </form>
+  {% else %}
+    <p class="hint" style="margin:6px 0 0">
+      Not set up yet. Create Google OAuth credentials and drop
+      <code>credentials.json</code> in the project folder (README has the exact
+      steps), then reload this page.
+    </p>
+  {% endif %}
+</div>
 
 <div class="panel" style="margin-bottom:18px">
   <h3 style="font-size:16px;margin:0 0 4px">Anthropic API key</h3>

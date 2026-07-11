@@ -44,3 +44,34 @@ def get(app_id: int) -> dict | None:
 def clear(app_id: int) -> None:
     with _lock:
         _jobs.pop(app_id, None)
+
+
+# --- The inbox scan is a single global job (Phase 4) -----------------------
+_scan: dict = {"status": "idle", "message": ""}
+_scan_lock = threading.Lock()
+
+
+def scan_start(target, *args) -> bool:
+    """Start the inbox scan on a background thread. False if already running."""
+    with _scan_lock:
+        if _scan.get("status") == "running":
+            return False
+        _scan.update(status="running", message="")
+    thread = threading.Thread(target=target, args=args, daemon=True)
+    thread.start()
+    return True
+
+
+def scan_done(message: str) -> None:
+    with _scan_lock:
+        _scan.update(status="done", message=message)
+
+
+def scan_error(message: str) -> None:
+    with _scan_lock:
+        _scan.update(status="error", message=message)
+
+
+def scan_get() -> dict:
+    with _scan_lock:
+        return dict(_scan)
