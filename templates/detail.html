@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ app.company }} · {{ app.position }}{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:14px"><a class="btn btn-ghost btn-sm" href="/">← Back</a></div>
+
+<div class="panel">
+  <div class="detail-head">
+    <div>
+      <div class="detail-title">{{ app.company }}</div>
+      <div class="card-sub" style="font-size:15px">{{ app.position }}{% if app.location %} · {{ app.location }}{% endif %}</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="pill status-{{ app.status }}">{{ STATUS_LABELS[app.status] }}</span>
+      <a class="btn btn-sm btn-primary" href="/applications/{{ app.id }}/edit">Edit</a>
+    </div>
+  </div>
+
+  {% if app.next_action %}
+  <div class="attn-reason" style="margin-bottom:16px">
+    ▸ {{ app.next_action }}{% if app.next_action_due %} · due {{ fmt_date(app.next_action_due) }}{% endif %}
+  </div>
+  {% endif %}
+
+  <dl class="dl">
+    {% if app.salary %}<dt>Salary</dt><dd>{{ app.salary }}</dd>{% endif %}
+    {% if app.source %}<dt>Source</dt><dd>{{ app.source }}</dd>{% endif %}
+    {% if app.seniority %}<dt>Seniority</dt><dd>{{ app.seniority }}</dd>{% endif %}
+    {% if app.industry %}<dt>Industry</dt><dd>{{ app.industry }}</dd>{% endif %}
+    {% if app.company_size %}<dt>Company size</dt><dd>{{ app.company_size }}</dd>{% endif %}
+    {% if app.date_applied %}<dt>Applied</dt><dd>{{ fmt_date(app.date_applied) }}</dd>{% endif %}
+    {% if app.contact_name or app.contact_email %}<dt>Contact</dt><dd>{{ app.contact_name or '' }}{% if app.contact_email %} · {{ app.contact_email }}{% endif %}</dd>{% endif %}
+    {% if app.posting_url %}<dt>Posting</dt><dd><a href="{{ app.posting_url }}" target="_blank" rel="noopener">{{ app.posting_url }}</a></dd>{% endif %}
+    {% if app.last_activity %}<dt>Last activity</dt><dd>{{ fmt_date(app.last_activity) }}</dd>{% endif %}
+  </dl>
+
+  {# keyword_gap: populated in Phase 2, but render it here as first-class when present. #}
+  {% if app.keyword_gap %}
+  <hr class="soft">
+  <h3 style="font-size:15px;margin:0 0 8px">Keyword gaps to close</h3>
+  <div class="chips">
+    {% for k in app.keyword_gap|fromjson %}<span class="kw-chip">{{ k }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if app.interview_notes %}
+  <hr class="soft">
+  <h3 style="font-size:15px;margin:0 0 6px">Notes</h3>
+  <div class="notes-block">{{ app.interview_notes }}</div>
+  {% endif %}
+</div>
+{% endblock %}

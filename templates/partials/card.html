@@ -1,0 +1,36 @@
+{# One application card. Expects `app`; `attention=True` adds the quick actions. #}
+<div class="card {% if attention %}attention{% endif %} fade-in" id="app-{{ app.id }}">
+  <div class="card-top">
+    <div>
+      <div class="card-title"><a href="/applications/{{ app.id }}">{{ app.company }}</a></div>
+      <div class="card-sub">{{ app.position }}{% if app.location %} · {{ app.location }}{% endif %}</div>
+    </div>
+    <span class="pill status-{{ app.status }}">{{ STATUS_LABELS[app.status] }}</span>
+  </div>
+
+  <div class="card-meta">
+    {% if app.next_action %}<span>▸ {{ app.next_action }}{% if app.next_action_due %} · {{ fmt_date(app.next_action_due) }}{% endif %}</span>{% endif %}
+    {% if app.source %}<span>{{ app.source }}</span>{% endif %}
+    {% if app.salary %}<span>{{ app.salary }}</span>{% endif %}
+  </div>
+
+  {% if attention %}
+    {% set reason = attn_reason(app) %}
+    {% if reason %}<div class="attn-reason">{{ reason }}</div>{% endif %}
+    <div class="card-actions">
+      <button class="btn btn-sm btn-attn"
+              hx-post="/applications/{{ app.id }}/followup"
+              hx-target="#home-body" hx-swap="innerHTML">Followed up (+7d)</button>
+      {% if app.status in ["wishlist","applied","screening","interview","final"] %}
+      <button class="btn btn-sm"
+              hx-post="/applications/{{ app.id }}/advance"
+              hx-target="#home-body" hx-swap="innerHTML">Move forward →</button>
+      {% endif %}
+      <button class="btn btn-sm btn-reject"
+              hx-post="/applications/{{ app.id }}/reject"
+              hx-target="#home-body" hx-swap="innerHTML"
+              hx-confirm="Log a rejection for {{ app.company }}?">Log rejection</button>
+      <a class="btn btn-sm btn-ghost" href="/applications/{{ app.id }}">Open details</a>
+    </div>
+  {% endif %}
+</div>

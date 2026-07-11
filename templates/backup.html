@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Backup & restore · Fieldnotes{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:14px"><a class="btn btn-ghost btn-sm" href="/">← Back</a></div>
+<div class="section-head"><h2>Backup &amp; restore</h2><span class="count">{{ count }} application(s)</span></div>
+
+{% if message %}
+<div class="empty quiet" style="text-align:left;margin-bottom:18px">{{ message }}</div>
+{% endif %}
+
+<div class="panel" style="margin-bottom:18px">
+  <h3 style="font-size:15px;margin:0 0 6px">Take your data with you</h3>
+  <p class="hint" style="margin-top:0">Your data is never trapped. Download a full copy any time.</p>
+  <div class="form-actions" style="margin-top:8px">
+    <a class="btn btn-primary" href="/export/json">Download JSON backup</a>
+    <a class="btn" href="/export/csv">Download CSV</a>
+  </div>
+</div>
+
+<div class="panel">
+  <h3 style="font-size:15px;margin:0 0 6px">Restore from a backup</h3>
+  <p class="hint" style="margin-top:0">Upload a JSON backup file. <strong>Merge</strong> adds its records alongside what's here; <strong>replace</strong> wipes everything first (only after you pick it and press the button).</p>
+  <form method="post" action="/restore" enctype="multipart/form-data">
+    <div class="form-grid" style="grid-template-columns:1fr">
+      <div class="field">
+        <label for="backup_file">Backup file (.json)</label>
+        <input id="backup_file" name="backup_file" type="file" accept="application/json,.json" required>
+      </div>
+      <div class="field">
+        <label for="mode">Mode</label>
+        <select id="mode" name="mode">
+          <option value="merge">Merge — keep existing, add these</option>
+          <option value="replace">Replace — wipe first, then import</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit"
+              onclick="return confirm('Import this backup now?');">Restore</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

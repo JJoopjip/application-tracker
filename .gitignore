@@ -1,0 +1,24 @@
+# Secrets & credentials
+.env
+credentials.json
+token.json
+
+# Local data (SQLite DB, backups, resume text)
+data/
+
+# Generated resumes / cover letters
+resumes/
+*.docx
+*.pdf
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS / editor cruft
+.DS_Store
+*.swp
+*:Zone.Identifier

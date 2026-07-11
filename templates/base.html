@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Job Application Tracker{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/fonts.css">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='42' fill='%2377A088'/></svg>">
+  <script src="/static/js/htmx.min.js" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a href="/" class="brand"><span class="dot"></span> Fieldnotes</a>
+      <div class="topbar-actions">
+        <a class="btn btn-ghost btn-sm" href="/backup">Backup</a>
+        <a class="btn btn-ghost btn-sm" href="/export/csv">Export CSV</a>
+        <a class="btn btn-primary btn-sm" href="/applications/new">+ Add role</a>
+      </div>
+    </header>
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

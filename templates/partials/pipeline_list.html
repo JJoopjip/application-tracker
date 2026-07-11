@@ -1,0 +1,15 @@
+{% if pipeline %}
+  {% for app in pipeline %}
+    {% with attention=False %}{% include "partials/card.html" %}{% endwith %}
+  {% endfor %}
+{% else %}
+  <div class="empty">
+    {% if active_status %}
+      <strong>Nothing here yet</strong>
+      No roles in this stage right now.
+    {% else %}
+      <strong>Your pipeline is empty — for now</strong>
+      Add the first role you're curious about and it'll live here. Even a wishlist entry counts.
+    {% endif %}
+  </div>
+{% endif %}
