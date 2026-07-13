@@ -21,7 +21,17 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import ai, db, fetch, gmail_client, jobs, logic, matching, settings_store
+from . import (
+    ai,
+    db,
+    fetch,
+    gmail_client,
+    import_from_generator,
+    jobs,
+    logic,
+    matching,
+    settings_store,
+)
 from .db import ROOT
 from integrations import resume_gen
 
@@ -99,6 +109,20 @@ def home(request: Request):
             "active_status": None,
             "search": "",
         },
+    )
+
+
+@app.get("/board", response_class=HTMLResponse)
+def board(request: Request):
+    """Kanban board: one column per status, drag a card to change its status."""
+    rows = db.all_applications()
+    columns = {s: [] for s in db.STATUSES}
+    for row in rows:
+        columns.setdefault(row["status"], []).append(row)
+    return templates.TemplateResponse(
+        request,
+        "board.html",
+        {"request": request, "columns": columns, "total": len(rows)},
     )
 
 
@@ -230,6 +254,38 @@ def reject(request: Request, app_id: int):
     return _home_body(request)
 
 
+@app.post("/applications/{app_id}/status", response_class=HTMLResponse)
+async def set_status(request: Request, app_id: int):
+    """Jump an application straight to any status. Powers both the click-the-pill
+    dropdown on list cards and drag-and-drop on the board.
+
+    The board drives this with fetch() and only needs a 2xx; the list card asks
+    (via `view=home`) for the refreshed home body so stats/attention update too.
+    """
+    form = await request.form()
+    new_status = (form.get("status") or "").strip()
+    if new_status not in db.STATUSES:
+        return Response("Unknown status", status_code=400)
+
+    app_row = db.get_application(app_id)
+    if app_row is None:
+        return Response("No such application", status_code=404)
+
+    extra = {}
+    # Stamp the applied date the first time it reaches "applied" (matches advance).
+    if new_status == "applied" and not app_row["date_applied"]:
+        extra["date_applied"] = date.today().isoformat()
+    # Closing a role clears any pending nudge, like Log rejection does.
+    if new_status in ("rejected", "ghosted", "withdrawn"):
+        extra["next_action"] = None
+        extra["next_action_due"] = None
+    db.set_fields(app_id, status=new_status, **extra)
+
+    if form.get("view") == "home":
+        return _home_body(request)
+    return Response(status_code=204)
+
+
 # ---------------------------------------------------------------------------
 # Settings — API key + resume text (Phase 2)
 # ---------------------------------------------------------------------------
@@ -345,6 +401,24 @@ async def intake_analyze(request: Request):
             "error": error,
         },
     )
+
+
+@app.post("/api/import")
+async def api_import(request: Request):
+    """Machine endpoint: the resume generator's "Add to tracker" button POSTs
+    {"folder": "<abs path to output/<slug>>", "jd_text": "<optional>"}. We read
+    that folder off the shared filesystem, AI-extract company/role from the JD,
+    create or reuse the application, and attach the resume + cover letter as a
+    new version. Localhost-only, same trust model as the rest of the app."""
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Expected a JSON body."}, status_code=400)
+    folder = (payload.get("folder") or "").strip()
+    if not folder:
+        return JSONResponse({"ok": False, "error": "Missing 'folder'."}, status_code=400)
+    result = import_from_generator.import_folder(folder, payload.get("jd_text"))
+    return JSONResponse(result, status_code=200 if result.get("ok") else 400)
 
 
 @app.post("/intake/save")

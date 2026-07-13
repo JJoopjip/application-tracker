@@ -230,6 +230,82 @@ a:hover { text-decoration: underline; }
 .pill.status-offer { background: #DDEBDD; color: #2f6b45; }
 .pill.status-interview, .pill.status-final { background: var(--apricot-tint); color: #8a5a29; }
 
+/* The status pill on a card is a real <select> styled to look like the pill —
+   click it, pick a stage, it saves instantly. Native picker = great on touch.
+   Uses .pill.status-select (specificity 0,2,0) so the caret survives the
+   background shorthands in the colour rules above. */
+.pill.status-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  padding-right: 25px;
+  line-height: 1.2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236C7772' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 9px 5px;
+}
+.pill.status-select:focus-visible { outline: 2px solid var(--sage); outline-offset: 1px; }
+.pill.status-select option { color: var(--slate); background: var(--surface); }
+
+/* --- Board (Kanban) -------------------------------------------------------*/
+.board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scroll-snap-type: x proximity;
+}
+.board-col {
+  flex: 0 0 200px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  min-height: 130px;
+  scroll-snap-align: start;
+  transition: background .12s ease, border-color .12s ease;
+}
+.board-col.over { border-color: var(--sage); background: var(--sage-tint); }
+.board-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+.board-col-count { font-size: 12px; color: var(--muted); font-weight: 600; }
+.board-col-body { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.board-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 11px;
+  cursor: grab;
+  box-shadow: var(--shadow);
+  transition: box-shadow .12s ease, border-color .12s ease, opacity .12s ease;
+}
+.board-card:active { cursor: grabbing; }
+.board-card.dragging { opacity: .4; }
+.board-card.saved { border-color: var(--sage); box-shadow: 0 0 0 2px var(--sage-tint); }
+.board-card-title { font-family: "Nunito", sans-serif; font-weight: 700; font-size: 14.5px; }
+.board-card-title a { color: var(--slate); }
+.board-card-sub { color: var(--muted); font-size: 12.5px; margin-top: 1px; }
+.board-col-empty {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0;                 /* only surfaces as a target while dragging over */
+  transition: opacity .12s ease;
+}
+.board-col.over .board-col-empty { opacity: 1; }
+
 /* --- Pipeline filters + search -------------------------------------------*/
 .filters {
   display: flex;

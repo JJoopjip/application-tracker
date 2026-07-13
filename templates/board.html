@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Board · Fieldnotes{% endblock %}
+{% block content %}
+
+<div class="section-head">
+  <h2>Board</h2>
+  <span class="count">{{ total }} total</span>
+</div>
+<p class="hint" style="margin-top:-6px;margin-bottom:14px">
+  Drag a card to another column to change its status — it saves on drop.
+  On a phone? Open the <a href="/">list</a> and tap a card's status instead.
+</p>
+
+<div class="board" id="board">
+  {% for status in STATUSES %}
+  <div class="board-col" data-status="{{ status }}"
+       ondragover="boardDragOver(event)"
+       ondragleave="boardDragLeave(event)"
+       ondrop="boardDrop(event)">
+    <div class="board-col-head">
+      <span class="pill status-{{ status }}">{{ STATUS_LABELS[status] }}</span>
+      <span class="board-col-count">{{ columns[status]|length }}</span>
+    </div>
+    <div class="board-col-body">
+      {% for app in columns[status] %}
+      <div class="board-card" draggable="true" data-id="{{ app.id }}"
+           ondragstart="boardDragStart(event)" ondragend="boardDragEnd(event)">
+        <div class="board-card-title">
+          <a href="/applications/{{ app.id }}">{{ app.company }}</a>
+        </div>
+        <div class="board-card-sub">{{ app.position }}{% if app.location %} · {{ app.location }}{% endif %}</div>
+      </div>
+      {% endfor %}
+      <div class="board-col-empty">Drop here</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+  // Native HTML5 drag-and-drop — no library. (Touch devices don't fire these
+  // events; that's why the phone hint points at the list view's tap-to-change.)
+  let dragEl = null;
+
+  function boardDragStart(e) {
+    dragEl = e.currentTarget;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragEl.dataset.id);
+    // Delay the class so the drag image is the solid card, not the faded one.
+    setTimeout(() => dragEl && dragEl.classList.add('dragging'), 0);
+  }
+  function boardDragEnd() {
+    if (dragEl) dragEl.classList.remove('dragging');
+    dragEl = null;
+    document.querySelectorAll('.board-col.over').forEach(c => c.classList.remove('over'));
+  }
+  function boardDragOver(e) {
+    e.preventDefault();               // required to allow a drop
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('over');
+  }
+  function boardDragLeave(e) {
+    // Only clear when the pointer actually left the column, not a child.
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      e.currentTarget.classList.remove('over');
+    }
+  }
+
+  function updateCounts() {
+    document.querySelectorAll('.board-col').forEach(col => {
+      const n = col.querySelectorAll('.board-card').length;
+      col.querySelector('.board-col-count').textContent = n;
+    });
+  }
+
+  async function boardDrop(e) {
+    e.preventDefault();
+    const col = e.currentTarget;
+    col.classList.remove('over');
+    if (!dragEl) return;
+
+    const fromCol = dragEl.closest('.board-col');
+    const newStatus = col.dataset.status;
+    if (fromCol === col) return;      // dropped back in place — nothing to do
+
+    // Optimistic move: reflect it immediately, then confirm with the server.
+    const body = col.querySelector('.board-col-body');
+    const emptyHint = body.querySelector('.board-col-empty');
+    body.insertBefore(dragEl, emptyHint);
+    updateCounts();
+
+    const id = dragEl.dataset.id;
+    const card = dragEl;
+    try {
+      const resp = await fetch(`/applications/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'status=' + encodeURIComponent(newStatus),
+      });
+      if (!resp.ok) throw new Error('save failed (' + resp.status + ')');
+      // Brief confirm flash.
+      card.classList.add('saved');
+      setTimeout(() => card.classList.remove('saved'), 700);
+    } catch (err) {
+      // Revert on failure so the board never lies about saved state.
+      const back = fromCol.querySelector('.board-col-body');
+      back.insertBefore(card, back.querySelector('.board-col-empty'));
+      updateCounts();
+      alert("Couldn't save that move: " + err.message);
+    }
+  }
+</script>
+{% endblock %}

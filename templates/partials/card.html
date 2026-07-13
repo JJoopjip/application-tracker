@@ -5,7 +5,19 @@
       <div class="card-title"><a href="/applications/{{ app.id }}">{{ app.company }}</a></div>
       <div class="card-sub">{{ app.position }}{% if app.location %} · {{ app.location }}{% endif %}</div>
     </div>
-    <span class="pill status-{{ app.status }}">{{ STATUS_LABELS[app.status] }}</span>
+    {# Click to change status — saves instantly, refreshes the page body. #}
+    <select class="pill status-select status-{{ app.status }}" name="status"
+            aria-label="Change status for {{ app.company }}"
+            title="Change status"
+            hx-post="/applications/{{ app.id }}/status"
+            hx-target="#home-body" hx-swap="innerHTML"
+            hx-trigger="change"
+            hx-vals='{"view":"home"}'
+            onchange="this.className='pill status-select status-'+this.value">
+      {% for s in STATUSES %}
+      <option value="{{ s }}" {% if s == app.status %}selected{% endif %}>{{ STATUS_LABELS[s] }}</option>
+      {% endfor %}
+    </select>
   </div>
 
   <div class="card-meta">
