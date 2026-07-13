@@ -16,6 +16,12 @@ import uvicorn
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
 
+# Auto-reload on code changes — on by default so editing app/*.py takes effect
+# without a manual restart. Set RELOAD=0 to disable (e.g. in the Docker image).
+# We watch only app/ on purpose: watching the whole project would reload on
+# every data/tracker.db write and churn through .venv.
+RELOAD = os.environ.get("RELOAD", "1") != "0"
+
 
 def main() -> None:
     url = f"http://{HOST}:{PORT}"
@@ -25,7 +31,13 @@ def main() -> None:
         webbrowser.open(url)
     except Exception:
         pass  # No browser (e.g. WSL/headless) is fine — the URL is printed.
-    uvicorn.run("app.main:app", host=HOST, port=PORT, reload=False)
+    uvicorn.run(
+        "app.main:app",
+        host=HOST,
+        port=PORT,
+        reload=RELOAD,
+        reload_dirs=["app"] if RELOAD else None,
+    )
 
 
 if __name__ == "__main__":
