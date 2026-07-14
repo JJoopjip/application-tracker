@@ -5,6 +5,11 @@ token.json
 
 # Local data (SQLite DB, backups, resume text)
 data/
+tracker.db
+tracker.db-shm
+tracker.db-wal
+*.sqlite
+*.sqlite3
 
 # Generated resumes / cover letters
 resumes/
