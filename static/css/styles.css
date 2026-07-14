@@ -108,6 +108,15 @@ a:hover { text-decoration: underline; }
 .btn-sm { font-size: 13px; padding: 8px 14px; min-height: 38px; }
 .btn-attn  { background: var(--apricot-tint); color: #8a5a29; }
 .btn-reject { background: var(--rose-tint); color: #8f5a63; }
+.btn-home {
+  margin-left: auto;
+  background: linear-gradient(135deg, var(--sage) 0%, var(--sage-strong) 100%);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(119,160,136,.45);
+  border: 2px solid #fff;
+}
+.btn-home:hover { background: var(--sage-strong); box-shadow: 0 6px 20px rgba(119,160,136,.6); }
 
 :focus-visible {
   outline: 3px solid var(--sage);
