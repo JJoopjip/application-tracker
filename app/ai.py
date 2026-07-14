@@ -192,18 +192,18 @@ def _cli_generate(prompt: str, model: str) -> str:
             [CLI_BIN, "-p", prompt, "--output-format", "json", "--model", model],
             capture_output=True, text=True, timeout=CLI_TIMEOUT,
         )
-    except FileNotFoundError:
-        raise RuntimeError("The Claude CLI isn't installed or on PATH.")
-    except subprocess.TimeoutExpired:
-        raise RuntimeError("The Claude CLI took too long to respond. Try again.")
+    except FileNotFoundError as exc:
+        raise RuntimeError("The Claude CLI isn't installed or on PATH.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("The Claude CLI took too long to respond. Try again.") from exc
 
     if proc.returncode != 0:
         detail = (proc.stderr or proc.stdout or "").strip()
         raise RuntimeError(f"The Claude CLI errored: {detail[:300] or 'unknown error'}")
     try:
         env = json.loads(proc.stdout)
-    except (ValueError, TypeError):
-        raise RuntimeError("The Claude CLI returned output we couldn't parse.")
+    except (ValueError, TypeError) as exc:
+        raise RuntimeError("The Claude CLI returned output we couldn't parse.") from exc
     if env.get("is_error"):
         raise RuntimeError(str(env.get("result") or "The Claude CLI reported an error."))
     usage = env.get("usage")
@@ -245,7 +245,7 @@ def _cli_structured(system_prompt, user_content, schema, model):
     """CLI path with schema validation and one repair round."""
     prompt = _cli_prompt(system_prompt, user_content, schema)
     raw = ""
-    for attempt in range(2):  # first shot, then a single repair attempt
+    for _ in range(2):  # first shot, then a single repair attempt
         try:
             raw = _cli_generate(prompt, model)
         except RuntimeError as exc:

@@ -22,6 +22,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 from app import ai, db, matching, settings_store
+
 # Reuse the naming/dedup file helpers the other direction already established.
 from integrations.resume_gen import (
     RESUME_GEN_DIR,

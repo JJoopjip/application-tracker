@@ -9,8 +9,6 @@
 Nothing here calls the network; it's just file access.
 """
 
-from pathlib import Path
-
 from .db import DATA_DIR, ROOT
 
 ENV_PATH = ROOT / ".env"

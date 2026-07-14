@@ -7,9 +7,10 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
+from integrations import resume_gen
+
 from .. import db, jobs
 from ..templating import templates
-from integrations import resume_gen
 
 router = APIRouter()
 
