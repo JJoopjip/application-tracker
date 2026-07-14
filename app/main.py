@@ -7,6 +7,7 @@ No build step, no npm. Run with `python run.py`.
 import csv
 import io
 import json
+from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -35,7 +36,14 @@ from . import (
 from .db import ROOT
 from integrations import resume_gen
 
-app = FastAPI(title="Job Application Tracker")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Run once on startup: make sure the DB and its schema exist."""
+    db.init_db()
+    yield
+
+
+app = FastAPI(title="Job Application Tracker", lifespan=lifespan)
 
 templates = Jinja2Templates(directory=str(ROOT / "templates"))
 app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
@@ -79,11 +87,6 @@ def _fromjson(value):
 
 
 templates.env.filters["fromjson"] = _fromjson
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    db.init_db()
 
 
 # ---------------------------------------------------------------------------
