@@ -4,7 +4,7 @@ the AI to propose the same role, and confirm the review screen flags it."""
 import pytest
 from fastapi.testclient import TestClient
 
-from app import db, main
+from app import ai, db, main
 
 
 @pytest.fixture
@@ -18,7 +18,9 @@ def client(tmp_path, monkeypatch):
 
 
 def _stub_ai(monkeypatch, company, position):
-    monkeypatch.setattr(main.ai, "analyze", lambda jd, resume: {
+    # intake route calls ai.analyze via `from .. import ai`, so patching the
+    # shared module attribute reaches it regardless of import location.
+    monkeypatch.setattr(ai, "analyze", lambda jd, resume: {
         "ok": True,
         "data": {
             "company": company, "position": position, "match_score": 70,
