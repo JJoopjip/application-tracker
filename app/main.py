@@ -393,6 +393,14 @@ async def intake_analyze(request: Request):
         proposal = result["data"]
         error = None
 
+    # Flag (don't block) if this looks like a role we already track, so the user
+    # can open the existing card instead of creating a second one.
+    duplicate = None
+    if proposal:
+        duplicate = matching.find_possible_duplicate(
+            proposal.get("company", ""), proposal.get("position", "")
+        )
+
     return templates.TemplateResponse(
         request,
         "review.html",
@@ -402,6 +410,7 @@ async def intake_analyze(request: Request):
             "jd_text": jd_text,
             "posting_url": url,
             "error": error,
+            "duplicate": duplicate,
         },
     )
 

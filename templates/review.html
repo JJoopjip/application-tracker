@@ -19,6 +19,8 @@
 </p>
 {% endif %}
 
+{% include "partials/duplicate_warning.html" %}
+
 <form class="panel" method="post" action="/intake/save">
   <input type="hidden" name="jd_full_text" value="{{ jd_text|e }}">
 

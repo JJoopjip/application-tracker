@@ -71,3 +71,41 @@ def find_match(thread_id: str, sender_email: str, company: str) -> int | None:
 
 def proposed_status(classification: str) -> str | None:
     return STATUS_FOR_CLASS.get(classification)
+
+
+_DUP_POSITION_THRESHOLD = 0.72
+
+
+def _norm_position(title: str) -> str:
+    """Normalize a job title for loose comparison: lowercase, punctuation and
+    seniority filler dropped so 'Sr. Software Engineer' ~ 'Software Engineer'."""
+    s = (title or "").lower()
+    s = re.sub(r"[^a-z0-9 ]", " ", s)
+    s = re.sub(r"\b(sr|snr|senior|jr|junior|staff|lead|principal|the)\b", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def find_possible_duplicate(company: str, position: str, exclude_id=None):
+    """Return an existing application that looks like the same role at the same
+    company, or None. Same normalized company, plus positions that are similar
+    (or either position blank). Used to warn before creating a second card for
+    something already tracked — never blocks, just flags."""
+    target_co = _norm(company)
+    if not target_co:
+        return None
+    target_pos = _norm_position(position)
+    for a in db.all_applications():
+        if exclude_id is not None and a["id"] == exclude_id:
+            continue
+        if _norm(a["company"]) != target_co:
+            continue
+        ap = _norm_position(a["position"])
+        # Same company already: treat as a likely dup unless the roles clearly
+        # differ. Blank/unknown titles collapse to "probably the same".
+        if not target_pos or not ap:
+            return a
+        if target_pos == ap or target_pos in ap or ap in target_pos:
+            return a
+        if SequenceMatcher(None, target_pos, ap).ratio() >= _DUP_POSITION_THRESHOLD:
+            return a
+    return None

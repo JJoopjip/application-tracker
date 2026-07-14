@@ -1,0 +1,10 @@
+{# Shown on the intake review screen when the proposed company+role looks like
+   something already tracked. Informational only — the user can still save. #}
+{% if duplicate %}
+<div class="empty" style="border-color:var(--apricot);background:var(--apricot-tint);color:#8a5a29;text-align:left;margin-bottom:18px">
+  ⚠️ You already have a card for <strong>{{ duplicate['company'] }}</strong>{% if duplicate['position'] %} — {{ duplicate['position'] }}{% endif %}
+  (<a href="/applications/{{ duplicate['id'] }}" style="color:#8a5a29;text-decoration:underline">#{{ duplicate['id'] }}</a>,
+  {{ STATUS_LABELS.get(duplicate['status'], duplicate['status']) }}).<br>
+  <span style="font-size:12.5px">Saving will create a second card. Open the existing one instead if this is the same role.</span>
+</div>
+{% endif %}
