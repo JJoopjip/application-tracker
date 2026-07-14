@@ -23,6 +23,7 @@ on both backends.
 """
 
 import json
+import logging
 import shutil
 import subprocess
 
@@ -30,6 +31,8 @@ import anthropic
 import jsonschema
 
 from . import settings_store
+
+logger = logging.getLogger(__name__)
 
 MODEL = "claude-opus-4-8"
 
@@ -127,15 +130,18 @@ def _parse_and_validate(raw: str, schema: dict):
 # ---------------------------------------------------------------------------
 def _api_structured(api_key, system_prompt, user_content, schema, model, effort, max_tokens):
     client = anthropic.Anthropic(api_key=api_key)
+    # Structured outputs constrain the reply to the schema. `effort` is only
+    # sent when requested AND supported — Haiku 4.5 (used for email triage) has
+    # no effort/thinking control and rejects the parameter with a 400.
+    output_config = {"format": {"type": "json_schema", "schema": schema}}
+    if effort:
+        output_config["effort"] = effort
     try:
         response = client.messages.create(
             model=model,
             max_tokens=max_tokens,
             system=system_prompt,
-            output_config={
-                "format": {"type": "json_schema", "schema": schema},
-                "effort": effort,
-            },
+            output_config=output_config,
             messages=[{"role": "user", "content": user_content}],
         )
     except anthropic.AuthenticationError:
@@ -148,6 +154,13 @@ def _api_structured(api_key, system_prompt, user_content, schema, model, effort,
         return {"ok": False, "error": f"The AI service had a problem: {exc}"}
     except Exception as exc:  # noqa: BLE001 — never crash the request
         return {"ok": False, "error": f"Something went wrong reaching the AI: {exc}"}
+
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        logger.info(
+            "AI call [api] model=%s input_tokens=%s output_tokens=%s",
+            model, usage.input_tokens, usage.output_tokens,
+        )
 
     if response.stop_reason == "refusal":
         return {"ok": False, "error": (
@@ -193,6 +206,13 @@ def _cli_generate(prompt: str, model: str) -> str:
         raise RuntimeError("The Claude CLI returned output we couldn't parse.")
     if env.get("is_error"):
         raise RuntimeError(str(env.get("result") or "The Claude CLI reported an error."))
+    usage = env.get("usage")
+    if usage:
+        logger.info(
+            "AI call [cli] model=%s input_tokens=%s output_tokens=%s cost_usd=%s",
+            model, usage.get("input_tokens"), usage.get("output_tokens"),
+            env.get("total_cost_usd"),
+        )
     return env.get("result") or ""
 
 
@@ -297,10 +317,14 @@ def analyze(jd_text: str, resume_text: str) -> dict:
 
 # ===========================================================================
 # Phase 4 — classify an inbox email about a job application.
-# Model is claude-opus-4-8 (the user chose the most accurate option, since
-# false positives here are costly — see EMAIL_MODEL to change it later).
+# Model is claude-haiku-4-5: this is a simple 7-way classification and every
+# result is shown to the user for review before it changes anything (see
+# review_confirm), so a misclassification is caught, not acted on. Haiku is the
+# right tier for this high-volume, low-effort task — ~5x cheaper than Opus.
+# Bump EMAIL_MODEL to claude-sonnet-5 or claude-opus-4-8 if you want more
+# accuracy at higher cost. (Haiku has no effort control — see classify_email.)
 # ===========================================================================
-EMAIL_MODEL = "claude-opus-4-8"
+EMAIL_MODEL = "claude-haiku-4-5"
 
 EMAIL_CLASSES = [
     "rejection",
@@ -381,7 +405,7 @@ def classify_email(email: dict) -> dict:
     )
     result = _generate_structured(
         EMAIL_SYSTEM_PROMPT, content, EMAIL_SCHEMA, EMAIL_MODEL,
-        effort="low", max_tokens=1024)  # simple classification — fast/cheap
+        effort=None, max_tokens=1024)  # Haiku: no effort param; fast/cheap
     if not result["ok"]:
         return result
     data = result["data"]
