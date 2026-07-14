@@ -133,9 +133,17 @@ CREATE TABLE IF NOT EXISTS email_events (
 
 
 def get_conn() -> sqlite3.Connection:
-    """Open a connection with row access by column name."""
-    conn = sqlite3.connect(DB_PATH)
+    """Open a connection with row access by column name.
+
+    ``busy_timeout`` makes writers wait (up to 5s) for a lock instead of
+    raising ``database is locked`` immediately — the background scan and tailor
+    threads (see jobs.py) write while the request thread is also touching the
+    DB. Paired with WAL mode (set once in :func:`init_db`), this lets readers
+    and a writer proceed concurrently.
+    """
+    conn = sqlite3.connect(DB_PATH, timeout=5.0)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 
@@ -143,6 +151,9 @@ def init_db() -> None:
     """Create the data directory and table if they don't exist yet."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with get_conn() as conn:
+        # WAL is a persistent, per-database setting — applying it once here is
+        # enough; it survives across connections and restarts.
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA)
 
 
